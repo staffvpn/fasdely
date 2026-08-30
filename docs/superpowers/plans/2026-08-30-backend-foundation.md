@@ -50,7 +50,10 @@ fasdely/
 │       │   ├── orderStateMachine.ts
 │       │   ├── orderStateMachine.test.ts
 │       │   ├── timeWindow.ts
-│       │   └── timeWindow.test.ts
+│       │   ├── timeWindow.test.ts
+│       │   ├── stopList.ts
+│       │   ├── stopList.test.ts
+│       │   └── http.ts
 │       ├── get-menu/
 │       │   ├── logic.ts
 │       │   ├── logic.test.ts
@@ -1373,6 +1376,9 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
   - `type WeeklySchedule = Partial<Record<'sun'|'mon'|'tue'|'wed'|'thu'|'fri'|'sat', {open: string; close: string; closed?: boolean}>>`
   - `isWithinSchedule(at: Date, schedule: WeeklySchedule, timezone: string): boolean`
   - `validateRequestedTime(mode: 'asap'|'scheduled', requestedAt: Date|null, now: Date, schedule: WeeklySchedule, timezone: string, prepTimeMinutes: number): {ok: boolean; reason?: 'location_closed'|'too_soon'|'outside_hours'}`
+  - `interface StopTimingFields { stopped_until: string | null; stopped_for_today: boolean; created_at: string }`
+  - `isStopActive(stop: StopTimingFields, now: Date): boolean` — shared by `get-menu` and `create-order` so the "is this stop currently in effect" rule is defined exactly once.
+  - `json(body: unknown, status?: number): Response` — shared JSON-response helper used by every Edge Function that returns JSON.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1513,10 +1519,50 @@ describe("validateRequestedTime", () => {
 });
 ```
 
+`supabase/functions/_shared/stopList.ts` has no separate test file of its
+own beyond what's below — `isStopActive` is exercised directly here and
+indirectly through `get-menu`'s and `create-order`'s tests in Tasks 11-12,
+which import it rather than redefining it.
+
+`supabase/functions/_shared/stopList.test.ts`:
+
+```ts
+import { describe, it, expect } from "vitest";
+import { isStopActive } from "./stopList.ts";
+
+const NOW = new Date("2026-08-31T10:00:00Z");
+
+describe("isStopActive", () => {
+  it("is active with no stopped_until and no stopped_for_today (manual/indefinite stop)", () => {
+    expect(isStopActive({ stopped_until: null, stopped_for_today: false, created_at: NOW.toISOString() }, NOW)).toBe(true);
+  });
+
+  it("is active while stopped_until is in the future", () => {
+    expect(isStopActive({ stopped_until: "2026-08-31T12:00:00Z", stopped_for_today: false, created_at: NOW.toISOString() }, NOW)).toBe(true);
+  });
+
+  it("is inactive once stopped_until is in the past", () => {
+    expect(isStopActive({ stopped_until: "2026-08-30T00:00:00Z", stopped_for_today: false, created_at: NOW.toISOString() }, NOW)).toBe(false);
+  });
+
+  it("stopped_for_today is active on the day it was created", () => {
+    expect(isStopActive({ stopped_until: null, stopped_for_today: true, created_at: "2026-08-31T09:00:00Z" }, NOW)).toBe(true);
+  });
+
+  it("stopped_for_today is inactive on a later day", () => {
+    expect(isStopActive({ stopped_until: null, stopped_for_today: true, created_at: "2026-08-30T09:00:00Z" }, NOW)).toBe(false);
+  });
+});
+```
+
+`supabase/functions/_shared/http.ts` also has no test file — it's a
+one-line `JSON.stringify` wrapper, exercised implicitly through every Edge
+Function integration smoke test in Tasks 11-15.
+
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `npx vitest run`
-Expected: FAIL — `telegramAuth.ts`, `orderStateMachine.ts`, `timeWindow.ts` don't exist yet.
+Expected: FAIL — `telegramAuth.ts`, `orderStateMachine.ts`, `timeWindow.ts`, `stopList.ts` don't exist yet.
 
 - [ ] **Step 3: Implement `telegramAuth.ts`**
 
@@ -1711,16 +1757,47 @@ export function validateRequestedTime(
 }
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [ ] **Step 6: Implement `stopList.ts`**
+
+```ts
+export interface StopTimingFields {
+  stopped_until: string | null;
+  stopped_for_today: boolean;
+  created_at: string;
+}
+
+export function isStopActive(stop: StopTimingFields, now: Date): boolean {
+  if (stop.stopped_for_today) {
+    const created = new Date(stop.created_at);
+    return (
+      created.getUTCFullYear() === now.getUTCFullYear() &&
+      created.getUTCMonth() === now.getUTCMonth() &&
+      created.getUTCDate() === now.getUTCDate()
+    );
+  }
+  if (stop.stopped_until) return new Date(stop.stopped_until) > now;
+  return true;
+}
+```
+
+- [ ] **Step 7: Implement `http.ts`**
+
+```ts
+export function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+}
+```
+
+- [ ] **Step 8: Run the tests to verify they pass**
 
 Run: `npx vitest run`
-Expected: PASS — all tests in the three new files green.
+Expected: PASS — all tests in the four new/updated files green (`telegramAuth`, `orderStateMachine`, `timeWindow`, `stopList`).
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add supabase/functions/_shared/
-git commit -m "feat: shared Telegram auth, order state machine, and time-window logic
+git commit -m "feat: shared Telegram auth, order state machine, time-window, stop-list, and http logic
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
@@ -1735,9 +1812,9 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 - Create: `supabase/functions/get-menu/index.ts`
 
 **Interfaces:**
-- Consumes: nothing from other tasks directly (pure function; `index.ts`
-  queries `locations`, `categories`, `products`, `product_location_overrides`,
-  `stop_list` at runtime).
+- Consumes: `isStopActive` (Task 10, `_shared/stopList.ts`), `json` (Task 10,
+  `_shared/http.ts`); `index.ts` queries `locations`, `categories`,
+  `products`, `product_location_overrides`, `stop_list` at runtime.
 - Produces: `buildMenu(categories, products, stops, now): {categories, products}`;
   deployed function `GET /functions/v1/get-menu?location_id=<uuid>`.
 
@@ -1842,6 +1919,8 @@ Expected: FAIL — `./logic.ts` doesn't exist.
 - [ ] **Step 3: Implement `logic.ts`**
 
 ```ts
+import { isStopActive } from "../_shared/stopList.ts";
+
 export interface CategoryRow {
   id: string;
   name: string;
@@ -1888,22 +1967,6 @@ export interface MenuProduct {
   ingredients: string | null;
   allergens: string[];
   badges: string[];
-}
-
-export function isStopActive(
-  stop: Pick<StopRow, "stopped_until" | "stopped_for_today" | "created_at">,
-  now: Date
-): boolean {
-  if (stop.stopped_for_today) {
-    const created = new Date(stop.created_at);
-    return (
-      created.getUTCFullYear() === now.getUTCFullYear() &&
-      created.getUTCMonth() === now.getUTCMonth() &&
-      created.getUTCDate() === now.getUTCDate()
-    );
-  }
-  if (stop.stopped_until) return new Date(stop.stopped_until) > now;
-  return true;
 }
 
 export function buildMenu(
@@ -1955,10 +2018,7 @@ Expected: PASS.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildMenu, type ProductRow, type StopRow } from "./logic.ts";
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
-}
+import { json } from "../_shared/http.ts";
 
 Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
@@ -2011,7 +2071,9 @@ Use the Supabase MCP tool `deploy_edge_function` with:
 - `entrypoint_path`: `index.ts`
 - `verify_jwt`: `false` (guests have no Supabase session; this endpoint only
   reads published data)
-- `files`: `index.ts` and `logic.ts` (contents from Steps 3 and 5)
+- `files`: `index.ts`, `logic.ts` (contents from Steps 3 and 5), plus
+  `_shared/stopList.ts` and `_shared/http.ts` (from Task 10) at their
+  matching relative paths (`../_shared/stopList.ts`, `../_shared/http.ts`)
 
 - [ ] **Step 7: Smoke-test the deployed function**
 
@@ -2046,7 +2108,8 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 - Create: `supabase/functions/create-order/index.ts`
 
 **Interfaces:**
-- Consumes: `verifyTelegramInitData` (Task 10), `validateRequestedTime`/`WeeklySchedule` (Task 10).
+- Consumes: `verifyTelegramInitData` (Task 10), `validateRequestedTime`/`WeeklySchedule` (Task 10),
+  `isStopActive` (Task 10, `_shared/stopList.ts`), `json` (Task 10, `_shared/http.ts`).
 - Produces: `validateAndPriceOrder(items, products, modifiers, stops, now): OrderValidationResult`;
   deployed function `POST /functions/v1/create-order`.
 
@@ -2161,6 +2224,8 @@ Expected: FAIL — `./logic.ts` doesn't exist.
 - [ ] **Step 3: Implement `logic.ts`**
 
 ```ts
+import { isStopActive } from "../_shared/stopList.ts";
+
 export interface CartItemInput {
   product_id: string;
   quantity: number;
@@ -2206,22 +2271,6 @@ export type OrderValidationResult =
       reason: "empty_cart" | "product_unavailable" | "product_not_found" | "invalid_quantity";
       product_id?: string;
     };
-
-function isStopActive(
-  stop: Pick<StopEntry, "stopped_until" | "stopped_for_today" | "created_at">,
-  now: Date
-): boolean {
-  if (stop.stopped_for_today) {
-    const created = new Date(stop.created_at);
-    return (
-      created.getUTCFullYear() === now.getUTCFullYear() &&
-      created.getUTCMonth() === now.getUTCMonth() &&
-      created.getUTCDate() === now.getUTCDate()
-    );
-  }
-  if (stop.stopped_until) return new Date(stop.stopped_until) > now;
-  return true;
-}
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -2297,6 +2346,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyTelegramInitData } from "../_shared/telegramAuth.ts";
 import { validateRequestedTime, type WeeklySchedule } from "../_shared/timeWindow.ts";
+import { json } from "../_shared/http.ts";
 import {
   validateAndPriceOrder,
   type CartItemInput,
@@ -2315,10 +2365,6 @@ interface CreateOrderBody {
   comment?: string | null;
   idempotency_key: string;
   items: CartItemInput[];
-}
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
 Deno.serve(async (req: Request) => {
@@ -2476,10 +2522,10 @@ Deno.serve(async (req: Request) => {
 Use `deploy_edge_function` — `project_id` `rlxbhbdcecrnykwxnqtx`, `name`
 `create-order`, `entrypoint_path` `index.ts`, `verify_jwt` `false` (guests
 authenticate via Telegram `initData`, not a Supabase session), `files`:
-`index.ts`, `logic.ts`, and the three `_shared/*.ts` files it imports
-(`telegramAuth.ts`, `timeWindow.ts`) — note `import_map_path` is not needed
-since imports use full `https://esm.sh/...` and relative `../_shared/...`
-paths directly.
+`index.ts`, `logic.ts`, and the `_shared/*.ts` files it imports
+(`telegramAuth.ts`, `timeWindow.ts`, `stopList.ts`, `http.ts`) — note
+`import_map_path` is not needed since imports use full
+`https://esm.sh/...` and relative `../_shared/...` paths directly.
 
 - [ ] **Step 7: Note the manual secret-configuration step**
 
@@ -2508,7 +2554,7 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 - Create: `supabase/functions/update-order-status/index.ts`
 
 **Interfaces:**
-- Consumes: `canStaffTransition`, `type OrderStatus` (Task 10).
+- Consumes: `canStaffTransition`, `type OrderStatus` (Task 10), `json` (Task 10, `_shared/http.ts`).
 - Produces: deployed function `POST /functions/v1/update-order-status`
   (requires a staff/operator Supabase Auth session).
 
@@ -2523,10 +2569,7 @@ Step 3 below rather than with a Vitest mock.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { canStaffTransition, type OrderStatus } from "../_shared/orderStateMachine.ts";
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
-}
+import { json } from "../_shared/http.ts";
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -2602,7 +2645,7 @@ Deno.serve(async (req: Request) => {
 Use `deploy_edge_function` — `project_id` `rlxbhbdcecrnykwxnqtx`, `name`
 `update-order-status`, `entrypoint_path` `index.ts`, `verify_jwt` `true`
 (staff must be signed in via Supabase Auth), `files`: `index.ts` and the
-`_shared/orderStateMachine.ts` file it imports.
+`_shared/orderStateMachine.ts` and `_shared/http.ts` files it imports.
 
 - [ ] **Step 3: Verify the race-condition guard directly in SQL**
 
@@ -2659,7 +2702,7 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 
 **Interfaces:**
 - Consumes: `canGuestCancel`, `type OrderStatus` (Task 10);
-  `verifyTelegramInitData` (Task 10).
+  `verifyTelegramInitData` (Task 10); `json` (Task 10, `_shared/http.ts`).
 - Produces: `checkCancelAllowed(input): {ok: true} | {ok: false; reason: 'forbidden'|'not_cancellable'}`;
   deployed function `POST /functions/v1/cancel-order`.
 
@@ -2743,16 +2786,13 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyTelegramInitData } from "../_shared/telegramAuth.ts";
 import type { OrderStatus } from "../_shared/orderStateMachine.ts";
+import { json } from "../_shared/http.ts";
 import { checkCancelAllowed } from "./logic.ts";
 
 interface CancelBody {
   init_data: string;
   order_id: string;
   reason?: string;
-}
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
 Deno.serve(async (req: Request) => {
@@ -2818,7 +2858,7 @@ Deno.serve(async (req: Request) => {
 Use `deploy_edge_function` — `project_id` `rlxbhbdcecrnykwxnqtx`, `name`
 `cancel-order`, `entrypoint_path` `index.ts`, `verify_jwt` `false` (guest
 auth is via Telegram `initData`), `files`: `index.ts`, `logic.ts`, and
-`../_shared/telegramAuth.ts` / `../_shared/orderStateMachine.ts`.
+`_shared/telegramAuth.ts` / `_shared/orderStateMachine.ts` / `_shared/http.ts`.
 
 - [ ] **Step 7: Commit**
 
