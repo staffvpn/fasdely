@@ -11,6 +11,7 @@ export interface ProductCatalogEntry {
   name: string;
   base_price: number;
   status: "draft" | "published" | "archived";
+  category_id: string | null;
   location_override: { price_override: number | null; is_available: boolean; is_published: boolean } | null;
 }
 
@@ -63,6 +64,7 @@ export function validateAndPriceOrder(
   const activeStops = stops.filter((s) => isStopActive(s, now));
   const stoppedProductIds = new Set(activeStops.filter((s) => s.scope_type === "product").map((s) => s.scope_id));
   const stoppedModifierIds = new Set(activeStops.filter((s) => s.scope_type === "modifier").map((s) => s.scope_id));
+  const stoppedCategoryIds = new Set(activeStops.filter((s) => s.scope_type === "category").map((s) => s.scope_id));
 
   const priced: PricedItem[] = [];
 
@@ -78,7 +80,11 @@ export function validateAndPriceOrder(
 
     const override = product.location_override;
     const available = override ? override.is_available && override.is_published : true;
-    if (!available || stoppedProductIds.has(product.id)) {
+    if (
+      !available ||
+      stoppedProductIds.has(product.id) ||
+      (product.category_id && stoppedCategoryIds.has(product.category_id))
+    ) {
       return { ok: false, reason: "product_unavailable", product_id: item.product_id };
     }
     if (item.modifier_ids.some((id) => stoppedModifierIds.has(id))) {

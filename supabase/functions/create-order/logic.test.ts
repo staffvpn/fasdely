@@ -17,6 +17,7 @@ function products(...entries: Partial<ProductCatalogEntry>[]): Map<string, Produ
       name: "Cappuccino",
       base_price: 280,
       status: "published",
+      category_id: null,
       location_override: null,
       ...e,
     };
@@ -64,6 +65,15 @@ describe("validateAndPriceOrder", () => {
       { scope_type: "product", scope_id: "prod-1", stopped_until: null, stopped_for_today: false, created_at: NOW.toISOString() },
     ];
     const result = validateAndPriceOrder(items, products({}), new Map(), pmg({}), stops, NOW);
+    expect(result).toEqual({ ok: false, reason: "product_unavailable", product_id: "prod-1" });
+  });
+
+  it("rejects a product whose category is stopped", () => {
+    const items: CartItemInput[] = [{ product_id: "prod-1", quantity: 1, modifier_ids: [] }];
+    const stops: StopEntry[] = [
+      { scope_type: "category", scope_id: "cat-1", stopped_until: null, stopped_for_today: false, created_at: NOW.toISOString() },
+    ];
+    const result = validateAndPriceOrder(items, products({ category_id: "cat-1" }), new Map(), pmg({}), stops, NOW);
     expect(result).toEqual({ ok: false, reason: "product_unavailable", product_id: "prod-1" });
   });
 

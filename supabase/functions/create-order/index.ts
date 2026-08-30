@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
   const { data: productRows } = await db
     .from("products")
     .select(
-      "id, name, base_price, status, business_id, product_location_overrides!left(location_id, price_override, is_available, is_published)"
+      "id, name, base_price, status, business_id, category_id, product_location_overrides!left(location_id, price_override, is_available, is_published)"
     )
     .in("id", productIds);
 
@@ -81,7 +81,14 @@ Deno.serve(async (req: Request) => {
   for (const p of productRows ?? []) {
     if (p.business_id !== location.business_id) continue;
     const override = (p.product_location_overrides ?? []).find((o: any) => o.location_id === body.location_id) ?? null;
-    productMap.set(p.id, { id: p.id, name: p.name, base_price: p.base_price, status: p.status, location_override: override });
+    productMap.set(p.id, {
+      id: p.id,
+      name: p.name,
+      base_price: p.base_price,
+      status: p.status,
+      category_id: p.category_id,
+      location_override: override,
+    });
   }
 
   const modifierIds = [...new Set(body.items.flatMap((i) => i.modifier_ids ?? []))];
