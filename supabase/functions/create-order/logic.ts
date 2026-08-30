@@ -42,7 +42,7 @@ export type OrderValidationResult =
   | { ok: true; items: PricedItem[]; subtotal: number; total: number }
   | {
       ok: false;
-      reason: "empty_cart" | "product_unavailable" | "product_not_found" | "invalid_quantity";
+      reason: "empty_cart" | "product_unavailable" | "product_not_found" | "invalid_quantity" | "modifier_not_found";
       product_id?: string;
     };
 
@@ -54,6 +54,7 @@ export function validateAndPriceOrder(
   items: CartItemInput[],
   products: Map<string, ProductCatalogEntry>,
   modifiers: Map<string, ModifierCatalogEntry>,
+  productModifierGroups: Map<string, Set<string>>,
   stops: StopEntry[],
   now: Date
 ): OrderValidationResult {
@@ -84,11 +85,21 @@ export function validateAndPriceOrder(
       return { ok: false, reason: "product_unavailable", product_id: item.product_id };
     }
 
-    const basePrice = override?.price_override ?? product.base_price;
-    const selectedModifiers = item.modifier_ids.map((id) => {
+    const allowedGroups = productModifierGroups.get(product.id) ?? new Set<string>();
+    const selectedModifiers: { id: string; name: string; price_delta: number }[] = [];
+    for (const id of item.modifier_ids) {
       const m = modifiers.get(id);
-      return m ? { id: m.id, name: m.name, price_delta: m.price_delta } : { id, name: "unknown", price_delta: 0 };
-    });
+      // Reject outright rather than silently defaulting to a zero price delta:
+      // an unrecognized id (never scoped to this business) or a modifier not
+      // actually attached to this product via product_modifier_groups must
+      // not be allowed to price in at all.
+      if (!m || !allowedGroups.has(m.group_id)) {
+        return { ok: false, reason: "modifier_not_found", product_id: item.product_id };
+      }
+      selectedModifiers.push({ id: m.id, name: m.name, price_delta: m.price_delta });
+    }
+
+    const basePrice = override?.price_override ?? product.base_price;
     const modifiersTotal = selectedModifiers.reduce((sum, m) => sum + m.price_delta, 0);
     const unitPrice = round2(basePrice + modifiersTotal);
     const lineTotal = round2(unitPrice * item.quantity);

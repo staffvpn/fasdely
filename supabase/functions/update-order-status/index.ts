@@ -21,7 +21,12 @@ Deno.serve(async (req: Request) => {
   // own authorization checks below rather than relying on RLS.
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-  const { data: profile } = await db.from("profiles").select("role, location_id").eq("id", userData.user.id).maybeSingle();
+  const { data: profile } = await db
+    .from("profiles")
+    .select("role, location_id")
+    .eq("id", userData.user.id)
+    .eq("status", "active")
+    .maybeSingle();
   if (!profile || !["staff", "fasdely_operator", "fasdely_admin"].includes(profile.role)) {
     return json({ error: "forbidden" }, 403);
   }
@@ -61,7 +66,10 @@ Deno.serve(async (req: Request) => {
 
   await db.from("order_events").insert({
     order_id: order.id,
-    event_type: "status_change",
+    // Match cancel-order's convention: a cancellation is recorded as
+    // event_type 'cancellation' regardless of whether the guest or the
+    // establishment initiated it. Every other transition stays 'status_change'.
+    event_type: body.to_status === "cancelled_by_establishment" ? "cancellation" : "status_change",
     from_status: order.status,
     to_status: body.to_status,
     actor_type: "staff",

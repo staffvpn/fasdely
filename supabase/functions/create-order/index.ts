@@ -46,6 +46,7 @@ Deno.serve(async (req: Request) => {
     .from("orders")
     .select("id, order_number, status, total")
     .eq("location_id", body.location_id)
+    .eq("guest_telegram_user_id", auth.user.id)
     .eq("idempotency_key", body.idempotency_key)
     .maybeSingle();
   if (existing) return json({ order: existing }, 200);
@@ -85,11 +86,31 @@ Deno.serve(async (req: Request) => {
 
   const modifierIds = [...new Set(body.items.flatMap((i) => i.modifier_ids ?? []))];
   const { data: modifierRows } = modifierIds.length
-    ? await db.from("modifiers").select("id, modifier_group_id, name, price_delta").in("id", modifierIds)
+    ? await db
+        .from("modifiers")
+        .select("id, modifier_group_id, name, price_delta, modifier_groups(business_id)")
+        .in("id", modifierIds)
     : { data: [] as any[] };
-  const modifierMap = new Map<string, ModifierCatalogEntry>(
-    (modifierRows ?? []).map((m: any) => [m.id, { id: m.id, group_id: m.modifier_group_id, name: m.name, price_delta: m.price_delta }])
-  );
+
+  const modifierMap = new Map<string, ModifierCatalogEntry>();
+  for (const m of modifierRows ?? []) {
+    if ((m as any).modifier_groups?.business_id !== location.business_id) continue;
+    modifierMap.set(m.id, { id: m.id, group_id: m.modifier_group_id, name: m.name, price_delta: m.price_delta });
+  }
+
+  // Which modifier_groups are actually attached to which cart products, so a
+  // modifier that exists (and is in the right business) but was never linked
+  // to this specific product via product_modifier_groups is still rejected.
+  const { data: pmgRows } = await db
+    .from("product_modifier_groups")
+    .select("product_id, modifier_group_id")
+    .in("product_id", productIds);
+  const productModifierGroups = new Map<string, Set<string>>();
+  for (const row of pmgRows ?? []) {
+    const set = productModifierGroups.get(row.product_id) ?? new Set<string>();
+    set.add(row.modifier_group_id);
+    productModifierGroups.set(row.product_id, set);
+  }
 
   const { data: stopRows } = await db
     .from("stop_list")
@@ -102,6 +123,7 @@ Deno.serve(async (req: Request) => {
     body.items.map((i) => ({ product_id: i.product_id, quantity: i.quantity, modifier_ids: i.modifier_ids ?? [] })),
     productMap,
     modifierMap,
+    productModifierGroups,
     (stopRows ?? []) as StopEntry[],
     now
   );
@@ -141,6 +163,7 @@ Deno.serve(async (req: Request) => {
         .from("orders")
         .select("id, order_number, status, total")
         .eq("location_id", body.location_id)
+        .eq("guest_telegram_user_id", auth.user.id)
         .eq("idempotency_key", body.idempotency_key)
         .maybeSingle();
       if (raceExisting) return json({ order: raceExisting }, 200);
@@ -148,7 +171,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: "order_create_failed" }, 500);
   }
 
-  await db.from("order_items").insert(
+  const { error: itemsError } = await db.from("order_items").insert(
     result.items.map((i) => ({
       order_id: order.id,
       product_id: i.product_id,
@@ -160,7 +183,16 @@ Deno.serve(async (req: Request) => {
     }))
   );
 
-  await db.from("order_events").insert({
+  if (itemsError) {
+    // Compensating action: an order with no line items must never reach the
+    // guest as a 201. This is an interim fix, not full atomicity — a future
+    // improvement would wrap all 3 inserts in a single `security definer` SQL
+    // function so the whole thing commits or rolls back as one transaction.
+    await db.from("orders").delete().eq("id", order.id);
+    return json({ error: "order_create_failed" }, 500);
+  }
+
+  const { error: eventError } = await db.from("order_events").insert({
     order_id: order.id,
     event_type: "status_change",
     from_status: null,
@@ -168,6 +200,12 @@ Deno.serve(async (req: Request) => {
     actor_type: "guest",
     actor_id: String(auth.user.id),
   });
+  if (eventError) {
+    // The order and its items are valid at this point; a missing initial
+    // lifecycle event is a lesser problem than missing items, so log and
+    // still return 201 rather than rolling back a otherwise-good order.
+    console.error("create-order: failed to insert initial order_event", eventError);
+  }
 
   return json({ order }, 201);
 });
