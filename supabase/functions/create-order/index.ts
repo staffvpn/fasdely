@@ -1,8 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { verifyTelegramInitData } from "./_shared/telegramAuth.ts";
-import { validateRequestedTime, type WeeklySchedule } from "./_shared/timeWindow.ts";
-import { json } from "./_shared/http.ts";
+import { verifyTelegramInitData } from "../_shared/telegramAuth.ts";
+import { validateRequestedTime, type WeeklySchedule } from "../_shared/timeWindow.ts";
+import { json } from "../_shared/http.ts";
 import {
   validateAndPriceOrder,
   type CartItemInput,

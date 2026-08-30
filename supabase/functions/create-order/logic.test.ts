@@ -55,7 +55,7 @@ describe("validateAndPriceOrder", () => {
     const stops: StopEntry[] = [
       { scope_type: "product", scope_id: "prod-1", stopped_until: null, stopped_for_today: false, created_at: NOW.toISOString() },
     ];
-    const result = validateAndPriceOrder(items, products(), new Map(), stops, NOW);
+    const result = validateAndPriceOrder(items, products({}), new Map(), stops, NOW);
     expect(result).toEqual({ ok: false, reason: "product_unavailable", product_id: "prod-1" });
   });
 
@@ -67,7 +67,7 @@ describe("validateAndPriceOrder", () => {
     const stops: StopEntry[] = [
       { scope_type: "modifier", scope_id: "mod-1", stopped_until: null, stopped_for_today: false, created_at: NOW.toISOString() },
     ];
-    const result = validateAndPriceOrder(items, products(), modifiers, stops, NOW);
+    const result = validateAndPriceOrder(items, products({}), modifiers, stops, NOW);
     expect(result).toEqual({ ok: false, reason: "product_unavailable", product_id: "prod-1" });
   });
 

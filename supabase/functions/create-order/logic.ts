@@ -1,4 +1,4 @@
-import { isStopActive } from "./_shared/stopList.ts";
+import { isStopActive } from "../_shared/stopList.ts";
 
 export interface CartItemInput {
   product_id: string;
@@ -66,33 +66,24 @@ export function validateAndPriceOrder(
   const priced: PricedItem[] = [];
 
   for (const item of items) {
-    // Check quantity first
     if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
       return { ok: false, reason: "invalid_quantity", product_id: item.product_id };
     }
 
-    // Check stops before product existence (stops take precedence)
-    if (stoppedProductIds.has(item.product_id)) {
+    const product = products.get(item.product_id);
+    if (!product || product.status !== "published") {
+      return { ok: false, reason: "product_not_found", product_id: item.product_id };
+    }
+
+    const override = product.location_override;
+    const available = override ? override.is_available && override.is_published : true;
+    if (!available || stoppedProductIds.has(product.id)) {
       return { ok: false, reason: "product_unavailable", product_id: item.product_id };
     }
     if (item.modifier_ids.some((id) => stoppedModifierIds.has(id))) {
       return { ok: false, reason: "product_unavailable", product_id: item.product_id };
     }
 
-    // Check product exists and is published
-    const product = products.get(item.product_id);
-    if (!product || product.status !== "published") {
-      return { ok: false, reason: "product_not_found", product_id: item.product_id };
-    }
-
-    // Check product availability
-    const override = product.location_override;
-    const available = override ? override.is_available && override.is_published : true;
-    if (!available) {
-      return { ok: false, reason: "product_unavailable", product_id: item.product_id };
-    }
-
-    // Price the item
     const basePrice = override?.price_override ?? product.base_price;
     const selectedModifiers = item.modifier_ids.map((id) => {
       const m = modifiers.get(id);
