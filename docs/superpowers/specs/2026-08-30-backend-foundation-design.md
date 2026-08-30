@@ -18,6 +18,32 @@ implementation cycle:
 4. FASDELY Admin Dashboard (menu/business/location management) — depends on (1).
 5. Analytics, subscriptions billing, advertising — later, needs live order data.
 
+### Decision (2026-08-30): hybrid self-serve for stop-list and price
+
+The product/business prompts originally specified that café owners/staff never
+edit the menu directly — all changes go through FASDELY operators via Telegram
+message. On reflection, this creates real friction for the two highest-frequency,
+lowest-risk operations: toggling item availability (86'ing something) and
+changing an existing item's price. Both are mechanical (no risk to menu
+presentation quality/Menu Health Score) and often time-sensitive.
+
+**Revised model (to be designed in sub-project 2):** `business_owner`/`staff`
+get a narrow, self-serve path inside the same Telegram bot for exactly two
+operations — stop-list toggle and price edit on an *existing* product. Every
+other change (new products, photos, descriptions, categories, seasonal
+collections, promotions) still goes through FASDELY operators via Telegram
+message, preserving the managed-menu differentiation and quality control that
+justify the subscription.
+
+This does not change the Backend Foundation schema: `stop_list` and
+`products.base_price`/`product_location_overrides.price_override` already
+exist (Task 3, Task 2), `business_owner`/`staff` roles and their RLS read
+scope already exist (Task 5). Sub-project 2 will need two narrow, audited
+write paths (Edge Functions or tightly-scoped RLS write policies) for these
+two operations specifically — every such change must still land in
+`audit_log` with the correct actor, same as operator-made changes, so the
+change history stays complete regardless of who made the edit.
+
 This document covers sub-project 1 only.
 
 ## Goals
