@@ -191,6 +191,13 @@
     border-top: 1px solid var(--border); padding-top: 24px; font-size: 12.5px; color: var(--text-muted);
   }
   .legal b { color: var(--text); }
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 780px) { .features { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .features { grid-template-columns: 1fr; } }
+  .feature { border: 1px solid var(--border); border-radius: 14px; padding: 16px; background: var(--surface); }
+  .feature__title { font-weight: 700; font-size: 13.5px; margin-bottom: 6px; }
+  .feature__body { font-size: 12.5px; color: var(--text-muted); }
+
 </style>
 
 <div class="wrap">
@@ -207,8 +214,58 @@
     <p style="margin-top:16px"><span class="status-pill no-commission">● Без комиссии с заказов гостя</span></p>
   </header>
 
+
   <section class="section">
-    <p class="kicker">01 — Тарифы</p>
+    <p class="kicker">01 — О продукте</p>
+    <h2>Почему FASDELY</h2>
+    <p class="desc">Управляемый сервис, а не ещё одна панель, в которой кафе должно разбираться самостоятельно.</p>
+    <div class="features">
+      <div class="feature">
+        <div class="feature__title">Меню ведём мы</div>
+        <div class="feature__body">Кафе присылает изменения в Telegram — карточки товаров, цены, фото и структуру категорий ведёт команда FASDELY.</div>
+      </div>
+      <div class="feature">
+        <div class="feature__title">Заказ прямо в Telegram</div>
+        <div class="feature__body">Гостю не нужно ставить ещё одно приложение — сканирует QR и оформляет заказ в привычном Telegram.</div>
+      </div>
+      <div class="feature">
+        <div class="feature__title">Мультилокационность</div>
+        <div class="feature__body">Разные меню, цены и доступность на каждой точке — управляются из одного места, без дублирования вручную.</div>
+      </div>
+      <div class="feature">
+        <div class="feature__title">Простая работа персонала</div>
+        <div class="feature__body">Сотрудник просто принимает и обрабатывает заказ — быстрый интерфейс без лишних действий.</div>
+      </div>
+      <div class="feature">
+        <div class="feature__title">Сезонный контент</div>
+        <div class="feature__body">Летние, осенние и праздничные коллекции появляются в меню без дополнительной работы со стороны кафе.</div>
+      </div>
+      <div class="feature">
+        <div class="feature__title">Без комиссии с заказов</div>
+        <div class="feature__body">Гость платит кафе напрямую на месте — FASDELY не берёт процент с каждого заказа.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="kicker">02 — Онбординг</p>
+    <h2>От заявки до запуска</h2>
+    <p class="desc">Реальная последовательность — каждый шаг зависит от предыдущего, поэтому нумерация здесь осмысленна.</p>
+    <div class="steps">
+      <div class="step"><div class="step__num">01</div><div class="step__body">Кафе обращается в FASDELY</div></div>
+      <div class="step"><div class="step__num">02</div><div class="step__body">FASDELY собирает информацию о бизнесе</div></div>
+      <div class="step"><div class="step__num">03</div><div class="step__body">FASDELY собирает меню: позиции, цены, фото, состав, КБЖУ, аллергены</div></div>
+      <div class="step"><div class="step__num">04</div><div class="step__body">FASDELY создаёт цифровое меню</div></div>
+      <div class="step"><div class="step__num">05</div><div class="step__body">FASDELY настраивает локацию</div></div>
+      <div class="step"><div class="step__num">06</div><div class="step__body">FASDELY тестирует приём заказа</div></div>
+      <div class="step"><div class="step__num">07</div><div class="step__body">Кафе получает QR</div></div>
+      <div class="step"><div class="step__num">08</div><div class="step__body">Персонал получает доступ к интерфейсу приёма заказов</div></div>
+      <div class="step"><div class="step__num">09</div><div class="step__body">Кафе запускается</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="kicker">03 — Тарифы</p>
     <h2>Три плана, один принцип: меню ведём мы</h2>
     <p class="desc">Цены и лимиты хранятся как конфигурация, а не зашиты в код — их можно менять без релиза продукта.</p>
     <div class="plans">
@@ -257,7 +314,7 @@
   </section>
 
   <section class="section">
-    <p class="kicker">02 — Добросовестное использование</p>
+    <p class="kicker">04 — Добросовестное использование</p>
     <h2>Лимиты защищают команду, а не наказывают кафе</h2>
     <p class="desc">Превышение лимита — повод предложить апгрейд, а не отказ в обслуживании. Мы не тарифицируем каждое мелкое изменение.</p>
     <div class="tbl-wrap">
@@ -276,7 +333,7 @@
   </section>
 
   <section class="section">
-    <p class="kicker">03 — Обработка изменений</p>
+    <p class="kicker">05 — Обработка изменений</p>
     <h2>Как кафе присылает правки</h2>
     <p class="desc">«Поставь капучино на 320 ₽», «убери чизкейк сегодня», «вот фото нового рафа» — в Telegram, без CMS для владельца.</p>
     <div class="sla-grid">
@@ -294,24 +351,7 @@
   </section>
 
   <section class="section">
-    <p class="kicker">04 — Онбординг</p>
-    <h2>От заявки до запуска</h2>
-    <p class="desc">Реальная последовательность — каждый шаг зависит от предыдущего, поэтому нумерация здесь осмысленна.</p>
-    <div class="steps">
-      <div class="step"><div class="step__num">01</div><div class="step__body">Кафе обращается в FASDELY</div></div>
-      <div class="step"><div class="step__num">02</div><div class="step__body">FASDELY собирает информацию о бизнесе</div></div>
-      <div class="step"><div class="step__num">03</div><div class="step__body">FASDELY собирает меню: позиции, цены, фото, состав, КБЖУ, аллергены</div></div>
-      <div class="step"><div class="step__num">04</div><div class="step__body">FASDELY создаёт цифровое меню</div></div>
-      <div class="step"><div class="step__num">05</div><div class="step__body">FASDELY настраивает локацию</div></div>
-      <div class="step"><div class="step__num">06</div><div class="step__body">FASDELY тестирует приём заказа</div></div>
-      <div class="step"><div class="step__num">07</div><div class="step__body">Кафе получает QR</div></div>
-      <div class="step"><div class="step__num">08</div><div class="step__body">Персонал получает доступ к интерфейсу приёма заказов</div></div>
-      <div class="step"><div class="step__num">09</div><div class="step__body">Кафе запускается</div></div>
-    </div>
-  </section>
-
-  <section class="section">
-    <p class="kicker">05 — Реклама</p>
+    <p class="kicker">06 — Реклама</p>
     <h2>Продвижение для кафе внутри платформы</h2>
     <p class="desc">Ориентировочные тестовые цены — гипотезы, не проверенный рынок. Спонсорский контент всегда явно помечается. Число рекламных слотов в интерфейсе гостя ограничено.</p>
     <div class="ad-grid">
@@ -323,7 +363,7 @@
   </section>
 
   <section class="section">
-    <p class="kicker">06 — Рост</p>
+    <p class="kicker">07 — Рост</p>
     <h2>Рефералы и годовая подписка</h2>
     <div class="info-grid">
       <div class="info-card">
@@ -345,7 +385,7 @@
   </section>
 
   <section class="section" style="margin-bottom: 0">
-    <p class="kicker">07 — Метрики</p>
+    <p class="kicker">08 — Метрики</p>
     <h2>Что видит FASDELY в админ-панели</h2>
     <span class="demo-chip">ДЕМО-ДАННЫЕ</span>
     <div class="kpis">
