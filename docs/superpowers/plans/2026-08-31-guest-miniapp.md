@@ -935,7 +935,7 @@ For each of the 6 `@font-face` blocks in the response matching `Unbounded`/weigh
 
 - [ ] **Step 6: Write `src/styles.css`**
 
-Port the design tokens and component classes from `docs/design/fasdely-design-system.html`'s `--m-*` custom properties and every one of these rule blocks verbatim (same selectors, same property values — that CSS was already reviewed and approved): `.p-card` and its `__img`/`__badge`/`__body`/`__name`/`__desc`/`__price` children; `.cart-row` and its `__thumb`/`__main`/`__name`/`__mods`/`__bottom`/`__price`/`__remove` children plus `.cart-stepper` and its `__btn`/`__n` children; `.ticket` and its `::before`/`::after`/`.t-line`/`.t-sub`/`.t-total` children; `.pay-pill`; `.btn`/`.btn--secondary`/`.btn--pine`/`.btn--block`; `.chip`/`.chips`; `.co-opt`/`.co-toggle`/`.co-time`/`.co-field`; `.track-list`/`.track-item`/`.track-dot`/`.track-label`/`.track-time` including the `is-done`/`is-current` state selectors and the `pulse`/`pop` keyframe animations; `.cancel-note`; `.success-check`/`.success-title`/`.success-sub`; `.mod-group`/`.mod-opt`/`.radio`/`.qty`/`.qty__btn`; `.sticky-cta`/`__info`/`__price`; `.app-header`/`__top`/`__name`/`__meta`/`.dot`; `.scroller`; `.icon-btn`; `.seasonal-card` (unused by any screen in this plan but harmless to keep for parity); `.grad-1`–`.grad-4`; `.screen`/`.grabber`; the `prefers-reduced-motion` block. With two changes: (1) replace the `@font-face` blocks' base64 `src: url(data:font/woff2;base64,...)` with real file references:
+Port the design tokens and component classes from `docs/design/fasdely-design-system.html`'s `--m-*` custom properties and every one of these rule blocks verbatim (same selectors, same property values — that CSS was already reviewed and approved): `.p-grid`; `.p-card` and its `__img`/`__badge`/`__body`/`__name`/`__desc`/`__price` children; `.pd-hero` and `.pd-hero__back`; `.pd-body`/`.pd-title`/`.pd-price`/`.pd-desc`; `.cart-row` and its `__thumb`/`__main`/`__name`/`__mods`/`__bottom`/`__price`/`__remove` children plus `.cart-stepper` and its `__btn`/`__n` children; `.ticket` and its `::before`/`::after`/`.t-line`/`.t-sub`/`.t-total` children; `.pay-pill`; `.btn`/`.btn--secondary`/`.btn--pine`/`.btn--block`; `.chip`/`.chips`; `.co-opt`/`.co-toggle`/`.co-time`/`.co-field`; `.track-list`/`.track-item`/`.track-dot`/`.track-label`/`.track-time` including the `is-done`/`is-current` state selectors and the `pulse`/`pop` keyframe animations; `.cancel-note`; `.success-check`/`.success-title`/`.success-sub`; `.mod-group`/`.mod-opt`/`.radio`/`.qty`/`.qty__btn`; `.sticky-cta`/`__info`/`__price`; `.app-header`/`__top`/`__name`/`__meta`/`.dot`; `.scroller`; `.icon-btn`; `.seasonal-card` (unused by any screen in this plan but harmless to keep for parity); `.grad-1`–`.grad-4`; `.screen`/`.grabber`; the `prefers-reduced-motion` block. With two changes: (1) replace the `@font-face` blocks' base64 `src: url(data:font/woff2;base64,...)` with real file references:
 
 ```css
 @font-face {
@@ -2371,6 +2371,10 @@ export function renderTrackingScreen(orderId: string, onBackToMenu: () => void):
       children.push(h("div", { class: "cancel-note" }, ["Отмена недоступна — заказ уже готовится"]));
     }
 
+    const backToMenuBtn = h("div", { class: "btn btn--secondary btn--block" }, ["К меню"]);
+    backToMenuBtn.addEventListener("click", onBackToMenu);
+    children.push(backToMenuBtn);
+
     body.replaceChildren(...children.map((c) => (typeof c === "string" ? h("div", {}, [c]) : c)));
 
     if (TERMINAL_STATUSES.has(order.status)) stopPolling();
@@ -2400,17 +2404,36 @@ export function renderTrackingScreen(orderId: string, onBackToMenu: () => void):
 
 - [ ] **Step 2: Wire into `main.ts`**
 
+This replaces Task 14's placeholder `showTracking(orderId: string) { // Task 15 implements this. }` stub entirely — its signature also changes (it now takes `menu` too, so "back to menu" has somewhere to navigate to) and Task 14's `showCheckout`'s `onOrderPlaced` callback must be updated to match:
+
 ```ts
 import { renderTrackingScreen } from "./screens/tracking.ts";
 
 let currentStopPolling: (() => void) | null = null;
 
-function showTracking(orderId: string) {
+function showTracking(orderId: string, menu: GetMenuResponse) {
   hideBackButton();
   if (currentStopPolling) currentStopPolling();
-  const { element, stopPolling } = renderTrackingScreen(orderId, () => {});
+  const { element, stopPolling } = renderTrackingScreen(orderId, () => showMenu(menu));
   currentStopPolling = stopPolling;
   app.replaceChildren(element);
+}
+```
+
+Also update `showCheckout` (written in Task 14) so its `onOrderPlaced` callback passes `menu` through to the new two-argument `showTracking`:
+
+```ts
+function showCheckout(menu: GetMenuResponse) {
+  showBackButton();
+  onBackButtonClick(() => showCart(menu));
+  const screen = renderCheckoutScreen(
+    cart,
+    menu.location.id,
+    (orderId) => showTracking(orderId, menu),
+    (message) => renderError(message),
+    () => showCart(menu)
+  );
+  app.replaceChildren(screen);
 }
 ```
 
