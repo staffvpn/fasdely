@@ -1,0 +1,302 @@
+@font-face {
+  font-family: 'FD Unbounded';
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url('/fonts/unbounded-700-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'FD Unbounded';
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  src: url('/fonts/unbounded-700-cyrillic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'FD Manrope';
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url('/fonts/manrope-400-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'FD Manrope';
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  src: url('/fonts/manrope-400-cyrillic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'FD Manrope';
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url('/fonts/manrope-700-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'FD Manrope';
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  src: url('/fonts/manrope-700-cyrillic.woff2') format('woff2');
+}
+
+/* Frozen mockup tokens — a specific product's own palette, does not invert
+   with the viewer's OS theme (same reasoning as a screenshot). */
+:root {
+  --m-ink: #1B1310;
+  --m-ink-70: rgba(27,19,16,.72);
+  --m-ink-45: rgba(27,19,16,.45);
+  --m-ink-14: rgba(27,19,16,.14);
+  --m-ink-08: rgba(27,19,16,.08);
+  --m-paper: #FAF6F1;
+  --m-paper-2: #F1E9DF;
+  --m-white: #FFFFFF;
+  --m-coral: #FF5A44;
+  --m-coral-deep: #E14430;
+  --m-coral-tint: #FFE7E2;
+  --m-pine: #1F6F54;
+  --m-pine-tint: #E4F2EC;
+  --m-amber: #C97F14;
+  --m-amber-tint: #FBEFD9;
+}
+
+/* App shell — the real app fills the whole viewport, it isn't framed in a
+   phone-mockup illustration like the design-system gallery. */
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; margin: 0; }
+body {
+  background: var(--m-paper);
+  color: var(--m-ink);
+  font-family: 'FD Manrope', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+#app { display: flex; flex-direction: column; overflow: hidden; }
+img { max-width: 100%; display: block; }
+svg { display: block; }
+
+/* The mockup's .p-card__img and .pd-hero were illustrated with flat gradient
+   divs; the real app puts an actual <img> inside them when a product has a
+   photo, so both containers need their image child to fill and crop properly. */
+.p-card__img { overflow: hidden; }
+.p-card__img img, .pd-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.screen {
+  background: var(--m-paper);
+  color: var(--m-ink);
+  font-family: 'FD Manrope', sans-serif;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.grabber { width: 38px; height: 4px; background: var(--m-ink-08); border-radius: 4px; margin: 9px auto 3px; flex: 0 0 auto; }
+
+/* icon buttons — real SVGs, precisely centered, never "escape" the circle */
+.icon-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--m-white);
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--m-ink-14);
+  flex: 0 0 auto;
+  transition: transform .15s ease;
+}
+.icon-btn svg { width: 16px; height: 16px; }
+.icon-btn:active { transform: scale(.92); }
+
+.app-header { padding: 14px 18px 14px; flex: 0 0 auto; }
+.app-header__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.app-header__name { font-family: 'FD Unbounded', sans-serif; font-weight: 700; font-size: 23px; letter-spacing: -.01em; min-width: 0; }
+.app-header__meta { font-size: 13.5px; color: var(--m-ink-70); margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--m-pine); flex: 0 0 auto; }
+
+.chips { display: flex; gap: 9px; padding: 0 18px 14px; overflow-x: auto; flex: 0 0 auto; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  font-size: 14.5px; font-weight: 700; padding: 12px 19px; border-radius: 100px;
+  background: var(--m-white); border: 1px solid var(--m-ink-14); white-space: nowrap;
+  flex: 0 0 auto;
+  transition: background .15s ease, color .15s ease;
+}
+.chip.is-active { background: var(--m-ink); color: var(--m-paper); border-color: var(--m-ink); }
+
+.scroller { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; min-height: 0; padding: 0 18px 18px; }
+
+.seasonal-card {
+  background: var(--m-amber-tint);
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  gap: 12px;
+  transition: transform .15s ease;
+}
+.seasonal-card:active { transform: scale(.98); }
+.seasonal-card__eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: .05em; color: var(--m-amber); text-transform: uppercase; }
+.seasonal-card__title { font-weight: 700; font-size: 17px; margin-top: 5px; }
+.seasonal-card__price { font-size: 14px; font-weight: 700; color: var(--m-ink-70); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.seasonal-card__arrow { width: 30px; height: 30px; border-radius: 50%; background: var(--m-white); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.seasonal-card__arrow svg { width: 14px; height: 14px; }
+
+.p-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.p-card {
+  background: var(--m-white); border-radius: 18px; overflow: hidden;
+  border: 1px solid var(--m-ink-14); display: flex; flex-direction: column;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.p-card:active { transform: scale(.97); }
+.p-card__img { height: 148px; position: relative; flex: 0 0 auto; }
+.p-card__badge {
+  position: absolute; top: 9px; left: 9px; font-size: 10px; font-weight: 700;
+  letter-spacing: .03em; padding: 4px 9px; border-radius: 100px;
+  background: var(--m-white); color: var(--m-coral-deep);
+}
+.p-card__body { padding: 14px 15px 16px; display: flex; flex-direction: column; gap: 5px; flex: 1 1 auto; }
+.p-card__name { font-weight: 700; font-size: 16.5px; line-height: 1.25; }
+.p-card__desc {
+  font-size: 13px; color: var(--m-ink-45); line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.p-card__price { font-weight: 700; font-size: 18px; margin-top: auto; padding-top: 10px; font-variant-numeric: tabular-nums; }
+
+.grad-1 { background: linear-gradient(135deg,#6B4A3A,#3A281F); }
+.grad-2 { background: linear-gradient(135deg,#E8956B,#C2593B); }
+.grad-3 { background: linear-gradient(135deg,#C9A277,#8A6244); }
+.grad-4 { background: linear-gradient(135deg,#4A3226,#241611); }
+
+.sticky-cta {
+  flex: 0 0 auto; padding: 14px 16px; background: var(--m-white);
+  border-top: 1px solid var(--m-ink-14); display: flex; align-items: center; gap: 12px;
+}
+.sticky-cta__info { font-size: 12.5px; color: var(--m-ink-70); line-height: 1.35; min-width: 0; }
+.sticky-cta__price { font-weight: 700; font-size: 18px; color: var(--m-ink); font-variant-numeric: tabular-nums; }
+.btn {
+  font-family: 'FD Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  border: none;
+  border-radius: 100px;
+  padding: 17px 24px;
+  background: var(--m-coral);
+  color: var(--m-white);
+  cursor: default;
+  flex: 1 1 auto;
+  text-align: center;
+  transition: transform .12s ease, opacity .12s ease;
+}
+.btn:active { transform: scale(.97); opacity: .92; }
+.btn--secondary { background: var(--m-white); color: var(--m-ink); border: 1.5px solid var(--m-ink-14); }
+.btn--pine { background: var(--m-pine); }
+.btn--block { display: block; width: 100%; }
+
+/* product detail — hero scrolls WITH the content, not fixed */
+.pd-hero { height: 280px; flex: 0 0 auto; position: relative; }
+.pd-hero__back {
+  position: absolute; top: 14px; left: 14px;
+  background: rgba(255,255,255,.92); backdrop-filter: blur(4px);
+}
+.pd-body { padding: 18px; }
+.pd-title { font-family: 'FD Unbounded', sans-serif; font-weight: 700; font-size: 25px; }
+.pd-price { font-weight: 700; font-size: 21px; color: var(--m-coral-deep); margin-top: 5px; font-variant-numeric: tabular-nums; }
+.pd-desc { font-size: 14.5px; color: var(--m-ink-70); margin: 14px 0 20px; line-height: 1.6; }
+.mod-group { margin-bottom: 18px; }
+.mod-group__title { font-weight: 700; font-size: 15px; margin-bottom: 11px; }
+.mod-opt { display: flex; justify-content: space-between; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--m-ink-14); font-size: 15px; }
+.mod-opt:last-child { border-bottom: none; }
+.radio { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--m-ink-45); flex: 0 0 auto; margin-right: 10px; position: relative; transition: border-color .15s ease; }
+.radio.is-on { border-color: var(--m-coral); border-width: 2px; }
+.radio.is-on::after { content:""; position:absolute; inset:3px; background: var(--m-coral); border-radius: 50%; }
+.mod-opt__label { display: flex; align-items: center; }
+.mod-opt__delta { color: var(--m-ink-45); font-weight: 600; font-variant-numeric: tabular-nums; }
+.qty { display: flex; align-items: center; gap: 16px; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+.qty__btn {
+  width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--m-ink-14);
+  display: flex; align-items: center; justify-content: center; transition: background .15s ease;
+}
+.qty__btn svg { width: 13px; height: 13px; }
+.qty__btn:active { background: var(--m-ink-08); }
+
+/* ticket — used only for READ-ONLY recaps (checkout summary, confirmation, tracking) */
+.ticket { background: var(--m-white); border-radius: 6px; padding: 18px; position: relative; }
+.ticket::before, .ticket::after { content:""; position:absolute; left:16px; right:16px; height:0; border-top: 2px dashed var(--m-ink-14); }
+.ticket::before { top: 0; } .ticket::after { bottom: 0; }
+.t-line { display: flex; align-items: baseline; gap: 8px; font-size: 15px; padding: 6px 0; }
+.t-line .leader { flex: 1; min-width: 12px; border-bottom: 1px dotted var(--m-ink-45); transform: translateY(-5px); }
+.t-line .price { font-weight: 700; font-variant-numeric: tabular-nums; }
+.t-sub { font-size: 11.5px; color: var(--m-ink-45); margin: -2px 0 7px 0; padding-left: 2px; }
+.t-total { display:flex; justify-content: space-between; border-top: 1px dashed var(--m-ink-14); margin-top: 12px; padding-top: 12px; font-weight: 700; font-size: 17.5px; font-variant-numeric: tabular-nums; }
+.pay-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; background: var(--m-pine-tint); color: var(--m-pine); padding: 6px 12px; border-radius: 100px; margin-top: 12px; }
+.pay-pill svg { width: 12px; height: 12px; }
+
+/* cart — interactive rows, real edit/remove controls (the actual bug fix) */
+.cart-row { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--m-ink-14); align-items: flex-start; }
+.cart-row:last-child { border-bottom: none; }
+.cart-row__thumb { width: 64px; height: 64px; border-radius: 14px; flex: 0 0 auto; }
+.cart-row__main { flex: 1 1 auto; min-width: 0; }
+.cart-row__name { font-weight: 700; font-size: 16px; }
+.cart-row__mods { font-size: 12px; color: var(--m-ink-45); margin-top: 2px; }
+.cart-row__bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; gap: 10px; }
+.cart-stepper { display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--m-ink-14); border-radius: 100px; padding: 4px 6px; }
+.cart-stepper__btn { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.cart-stepper__btn svg { width: 11px; height: 11px; }
+.cart-stepper__n { font-weight: 700; font-size: 13px; min-width: 14px; text-align: center; font-variant-numeric: tabular-nums; }
+.cart-row__price { font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
+.cart-row__remove { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; color: var(--m-ink-45); transition: background .15s ease, color .15s ease; }
+.cart-row__remove svg { width: 14px; height: 14px; }
+.cart-row__remove:active { background: var(--m-coral-tint); color: var(--m-coral-deep); }
+
+/* checkout — only the time-chip row scrolls horizontally, never the screen */
+.co-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.co-opt { border: 1.5px solid var(--m-ink-14); border-radius: 16px; padding: 14px; text-align: center; transition: border-color .15s ease, background .15s ease; min-width: 0; }
+.co-opt.is-on { border-color: var(--m-coral); background: var(--m-coral-tint); }
+.co-opt__icon { width: 26px; height: 26px; margin: 0 auto; }
+.co-opt__icon svg { width: 100%; height: 100%; }
+.co-opt__label { font-weight: 700; font-size: 15px; margin-top: 8px; }
+.co-opt__sub { font-size: 10.5px; color: var(--m-ink-45); margin-top: 2px; }
+.co-time { display: flex; gap: 9px; margin-bottom: 18px; overflow-x: auto; scrollbar-width: none; }
+.co-time::-webkit-scrollbar { display: none; }
+.co-time .chip { padding: 9px 16px; }
+.co-field {
+  border: 1px solid var(--m-ink-14); border-radius: 12px; padding: 12px 14px; font-size: 13px;
+  color: var(--m-ink-45); margin-bottom: 18px; background: var(--m-white); min-width: 0;
+}
+
+.success-check {
+  width: 60px; height: 60px; border-radius: 50%; background: var(--m-pine-tint);
+  display: flex; align-items: center; justify-content: center; margin: 10px auto 16px;
+  animation: pop .4s cubic-bezier(.34,1.56,.64,1);
+}
+.success-check svg { width: 26px; height: 26px; color: var(--m-pine); }
+@keyframes pop { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.success-title { font-family: 'FD Unbounded', sans-serif; font-weight: 700; font-size: 24px; text-align: center; }
+.success-sub { text-align: center; font-size: 13px; color: var(--m-ink-70); margin: 5px 0 20px; }
+
+.track-list { display: flex; flex-direction: column; margin-bottom: 18px; }
+.track-item { display: flex; gap: 14px; padding-bottom: 20px; position: relative; }
+.track-item:last-child { padding-bottom: 0; }
+.track-item::before { content:""; position:absolute; left:10px; top:22px; bottom:-2px; width:2px; background: var(--m-ink-14); }
+.track-item:last-child::before { display:none; }
+.track-dot {
+  width: 22px; height: 22px; border-radius: 50%; flex: 0 0 auto;
+  display:flex; align-items:center; justify-content:center; z-index:1;
+  background: var(--m-paper); border: 2px solid var(--m-ink-14);
+}
+.track-dot svg { width: 11px; height: 11px; color: var(--m-white); }
+.track-item.is-done .track-dot { background: var(--m-pine); border-color: var(--m-pine); }
+.track-item.is-current .track-dot { border-color: var(--m-coral); animation: pulse 1.6s ease infinite; }
+.track-item.is-current .track-dot::after { content:""; width:9px; height:9px; border-radius:50%; background: var(--m-coral); }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,90,68,.28); } 50% { box-shadow: 0 0 0 6px rgba(255,90,68,0); } }
+.track-label { font-weight: 700; font-size: 16px; padding-top: 2px; }
+.track-item:not(.is-done):not(.is-current) .track-label { color: var(--m-ink-45); }
+.track-time { font-size: 11px; color: var(--m-ink-45); font-variant-numeric: tabular-nums; }
+.cancel-note { text-align:center; font-size: 12px; color: var(--m-ink-45); margin-top: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
