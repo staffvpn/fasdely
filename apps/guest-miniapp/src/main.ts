@@ -4,6 +4,7 @@ import { getErrorMessage } from "./errors.ts";
 import { CartStore } from "./state.ts";
 import { renderMenuScreen } from "./screens/menu.ts";
 import { renderProductScreen } from "./screens/product.ts";
+import { renderCartScreen } from "./screens/cart.ts";
 import { h } from "./dom.ts";
 
 const app = document.getElementById("app")!;
@@ -40,13 +41,21 @@ async function boot() {
 
 function showMenu(data: GetMenuResponse) {
   hideBackButton();
-  const screen = renderMenuScreen(
-    data,
-    (productId) => showProduct(data, productId),
+  const screen = renderMenuScreen(data, (productId) => showProduct(data, productId), () => showCart(data), cart);
+  app.replaceChildren(screen);
+}
+
+function showCart(menu: GetMenuResponse) {
+  showBackButton();
+  onBackButtonClick(() => showMenu(menu));
+  const rerender = () => showCart(menu);
+  const screen = renderCartScreen(
+    cart,
+    rerender,
     () => {
-      // Task 13 wires cart navigation here.
+      // Task 14 wires checkout navigation here.
     },
-    cart
+    () => showMenu(menu)
   );
   app.replaceChildren(screen);
 }
