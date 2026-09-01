@@ -22,7 +22,13 @@ async function boot() {
     return;
   }
 
-  const result = await getMenu(qrToken);
+  let result;
+  try {
+    result = await getMenu(qrToken);
+  } catch {
+    renderError(getErrorMessage("network_error"));
+    return;
+  }
   if (!result.ok) {
     renderError(getErrorMessage(result.error, result.reason));
     return;
