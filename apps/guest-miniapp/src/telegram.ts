@@ -6,6 +6,7 @@ interface TelegramWebApp {
     show(): void;
     hide(): void;
     onClick(handler: () => void): void;
+    offClick(handler: () => void): void;
   };
   ready(): void;
   expand(): void;
@@ -31,8 +32,13 @@ export function getStartParam(): string | null {
   return webApp().initDataUnsafe.start_param ?? null;
 }
 
+let currentBackHandler: (() => void) | null = null;
+
 export function onBackButtonClick(handler: () => void): void {
-  webApp().BackButton.onClick(handler);
+  const app = webApp();
+  if (currentBackHandler) app.BackButton.offClick(currentBackHandler);
+  app.BackButton.onClick(handler);
+  currentBackHandler = handler;
 }
 
 export function showBackButton(): void {
