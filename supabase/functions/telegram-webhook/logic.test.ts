@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseStartCommand, buildMiniAppDeepLink } from "./logic.ts";
+import { parseMenuCommand, parseCallbackData, buildProductListKeyboard, parsePriceReplyContext } from "./logic.ts";
 
 describe("parseStartCommand", () => {
   it("parses /start with a payload", () => {
@@ -22,5 +23,61 @@ describe("parseStartCommand", () => {
 describe("buildMiniAppDeepLink", () => {
   it("builds a t.me startapp link", () => {
     expect(buildMiniAppDeepLink("FasdelyBot", "abc 123")).toBe("https://t.me/FasdelyBot/app?startapp=abc%20123");
+  });
+});
+
+describe("parseMenuCommand", () => {
+  it("recognizes /меню", () => {
+    expect(parseMenuCommand("/меню")).toBe(true);
+  });
+  it("recognizes /меню@BotUsername", () => {
+    expect(parseMenuCommand("/меню@FasdelyBot")).toBe(true);
+  });
+  it("rejects unrelated text", () => {
+    expect(parseMenuCommand("привет")).toBe(false);
+  });
+  it("rejects undefined", () => {
+    expect(parseMenuCommand(undefined)).toBe(false);
+  });
+});
+
+describe("parseCallbackData", () => {
+  it("parses a stop action", () => {
+    expect(parseCallbackData("stop:abc-123")).toEqual({ action: "stop", productId: "abc-123" });
+  });
+  it("parses an unstop action", () => {
+    expect(parseCallbackData("unstop:abc-123")).toEqual({ action: "unstop", productId: "abc-123" });
+  });
+  it("parses a price action", () => {
+    expect(parseCallbackData("price:abc-123")).toEqual({ action: "price", productId: "abc-123" });
+  });
+  it("returns null for malformed data", () => {
+    expect(parseCallbackData("nonsense")).toBeNull();
+  });
+});
+
+describe("buildProductListKeyboard", () => {
+  it("builds one row per product with stop/price buttons", () => {
+    const kb = buildProductListKeyboard([
+      { id: "p1", name: "Капучино", priceLabel: "280 ₽", isStopped: false },
+      { id: "p2", name: "Чизкейк", priceLabel: "320 ₽", isStopped: true },
+    ]);
+    expect(kb.inline_keyboard).toHaveLength(2);
+    expect(kb.inline_keyboard[0][0].text).toContain("Капучино");
+    expect(kb.inline_keyboard[0][0].callback_data).toBe("price:p1");
+    expect(kb.inline_keyboard[0][1].callback_data).toBe("stop:p1");
+    expect(kb.inline_keyboard[1][1].callback_data).toBe("unstop:p2");
+  });
+});
+
+describe("parsePriceReplyContext", () => {
+  it("extracts the embedded product id", () => {
+    expect(parsePriceReplyContext("Введите новую цену для Капучино\n\n#pid:abc-123")).toBe("abc-123");
+  });
+  it("returns null when there is no embedded id", () => {
+    expect(parsePriceReplyContext("просто сообщение")).toBeNull();
+  });
+  it("returns null for undefined", () => {
+    expect(parsePriceReplyContext(undefined)).toBeNull();
   });
 });
