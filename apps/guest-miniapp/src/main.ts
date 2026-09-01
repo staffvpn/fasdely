@@ -3,6 +3,7 @@ import { getMenu, type GetMenuResponse } from "./api.ts";
 import { getErrorMessage } from "./errors.ts";
 import { CartStore } from "./state.ts";
 import { renderMenuScreen } from "./screens/menu.ts";
+import { renderProductScreen } from "./screens/product.ts";
 import { h } from "./dom.ts";
 
 const app = document.getElementById("app")!;
@@ -41,13 +42,35 @@ function showMenu(data: GetMenuResponse) {
   hideBackButton();
   const screen = renderMenuScreen(
     data,
-    (productId) => {
-      // Task 12 wires product-detail navigation here.
-    },
+    (productId) => showProduct(data, productId),
     () => {
       // Task 13 wires cart navigation here.
     },
     cart
+  );
+  app.replaceChildren(screen);
+}
+
+function showProduct(menu: GetMenuResponse, productId: string) {
+  const product = menu.products.find((p) => p.id === productId);
+  if (!product) return;
+  showBackButton();
+  onBackButtonClick(() => showMenu(menu));
+  const screen = renderProductScreen(
+    product,
+    (quantity) => {
+      cart.add({
+        productId: product.id,
+        name: product.name,
+        unitPrice: product.price,
+        quantity,
+        modifierIds: [],
+        modifierLabel: "",
+      });
+      cart.save();
+      showMenu(menu);
+    },
+    () => showMenu(menu)
   );
   app.replaceChildren(screen);
 }
