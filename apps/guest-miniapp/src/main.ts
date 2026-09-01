@@ -6,10 +6,12 @@ import { renderMenuScreen } from "./screens/menu.ts";
 import { renderProductScreen } from "./screens/product.ts";
 import { renderCartScreen } from "./screens/cart.ts";
 import { renderCheckoutScreen } from "./screens/checkout.ts";
+import { renderTrackingScreen } from "./screens/tracking.ts";
 import { h } from "./dom.ts";
 
 const app = document.getElementById("app")!;
 const cart = CartStore.load();
+let currentStopPolling: (() => void) | null = null;
 
 function renderError(message: string) {
   app.replaceChildren(h("div", { class: "screen" }, [h("div", { class: "pd-body" }, [message])]));
@@ -60,15 +62,19 @@ function showCheckout(menu: GetMenuResponse) {
   const screen = renderCheckoutScreen(
     cart,
     menu.location.id,
-    (orderId) => showTracking(orderId),
+    (orderId) => showTracking(orderId, menu),
     (message) => renderError(message),
     () => showCart(menu)
   );
   app.replaceChildren(screen);
 }
 
-function showTracking(orderId: string) {
-  // Task 15 implements this.
+function showTracking(orderId: string, menu: GetMenuResponse) {
+  hideBackButton();
+  if (currentStopPolling) currentStopPolling();
+  const { element, stopPolling } = renderTrackingScreen(orderId, () => showMenu(menu));
+  currentStopPolling = stopPolling;
+  app.replaceChildren(element);
 }
 
 function showProduct(menu: GetMenuResponse, productId: string) {
