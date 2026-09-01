@@ -7,6 +7,8 @@ import {
   parseCallbackData,
   buildProductListKeyboard,
   parsePriceReplyContext,
+  isSelfServeRole,
+  isGenuineBotPromptReply,
   type ProductListEntry,
 } from "./logic.ts";
 
@@ -24,6 +26,19 @@ async function answerCallback(botToken: string, callbackQueryId: string, text?: 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
   });
+}
+
+// Shared self-serve location resolution: use the staff member's own location_id if set;
+// otherwise (business_owner with no single location assigned) fall back to the business's
+// locations and auto-resolve only when there is exactly one. Used by all three self-serve
+// entry points (/меню, callback-query, price-reply) so behavior is consistent everywhere a
+// location_id is needed — a staff/owner account that resolves in one flow must resolve the
+// same way in the others.
+async function resolveLocationId(db: any, businessId: string, profileLocationId: string | null): Promise<string | null> {
+  if (profileLocationId) return profileLocationId;
+  const { data: locations } = await db.from("locations").select("id").eq("business_id", businessId);
+  if (!locations || locations.length !== 1) return null;
+  return locations[0].id;
 }
 
 Deno.serve(async (req: Request) => {
@@ -68,20 +83,16 @@ Deno.serve(async (req: Request) => {
       .eq("status", "active")
       .maybeSingle();
 
-    if (!profile || !["staff", "business_owner"].includes(profile.role)) {
+    if (!profile || !isSelfServeRole(profile.role)) {
       await sendMessage(botToken, message.chat.id, "Эта команда доступна только сотрудникам подключённого кафе.");
       return new Response("ok", { status: 200 });
     }
 
-    let locationId = profile.location_id as string | null;
+    const locationId = await resolveLocationId(db, profile.business_id, profile.location_id);
     if (!locationId) {
       // business_owner with no single location: for MVP, require exactly one location or ask them to contact FASDELY.
-      const { data: locations } = await db.from("locations").select("id, name").eq("business_id", profile.business_id);
-      if (!locations || locations.length !== 1) {
-        await sendMessage(botToken, message.chat.id, "У вас несколько точек — выбор точки для самообслуживания пока не поддержан ботом, напишите нам напрямую.");
-        return new Response("ok", { status: 200 });
-      }
-      locationId = locations[0].id;
+      await sendMessage(botToken, message.chat.id, "У вас несколько точек — выбор точки для самообслуживания пока не поддержан ботом, напишите нам напрямую.");
+      return new Response("ok", { status: 200 });
     }
 
     const { data: products } = await db
@@ -110,10 +121,10 @@ Deno.serve(async (req: Request) => {
     return new Response("ok", { status: 200 });
   }
 
-  // --- self-serve: price reply (guest replies to the bot's "введите цену" prompt) ---
+  // --- self-serve: price reply (staff replies to the bot's own "введите цену" prompt) ---
   if (message?.reply_to_message && message?.from?.id && message?.chat?.id) {
     const productId = parsePriceReplyContext(message.reply_to_message.text);
-    if (productId) {
+    if (productId && isGenuineBotPromptReply(message.reply_to_message)) {
       const newPrice = Number(message.text?.replace(",", "."));
       if (!Number.isFinite(newPrice) || newPrice < 0) {
         await sendMessage(botToken, message.chat.id, "Не понял цену. Введите число, например 320.");
@@ -121,11 +132,17 @@ Deno.serve(async (req: Request) => {
       }
       const { data: profile } = await db
         .from("profiles")
-        .select("location_id")
+        .select("role, business_id, location_id")
         .eq("telegram_user_id", message.from.id)
         .eq("status", "active")
         .maybeSingle();
-      const locationId = profile?.location_id;
+
+      if (!profile || !isSelfServeRole(profile.role)) {
+        await sendMessage(botToken, message.chat.id, "Эта команда доступна только сотрудникам подключённого кафе.");
+        return new Response("ok", { status: 200 });
+      }
+
+      const locationId = await resolveLocationId(db, profile.business_id, profile.location_id);
       if (!locationId) {
         await sendMessage(botToken, message.chat.id, "Не удалось определить вашу точку.");
         return new Response("ok", { status: 200 });
@@ -148,12 +165,17 @@ Deno.serve(async (req: Request) => {
     if (parsed) {
       const { data: profile } = await db
         .from("profiles")
-        .select("location_id")
+        .select("role, business_id, location_id")
         .eq("telegram_user_id", callback.from.id)
         .eq("status", "active")
         .maybeSingle();
-      const locationId = profile?.location_id;
 
+      if (!profile || !isSelfServeRole(profile.role)) {
+        await answerCallback(botToken, callback.id, "Эта команда доступна только сотрудникам подключённого кафе.");
+        return new Response("ok", { status: 200 });
+      }
+
+      const locationId = await resolveLocationId(db, profile.business_id, profile.location_id);
       if (!locationId) {
         await answerCallback(botToken, callback.id, "Не удалось определить вашу точку.");
         return new Response("ok", { status: 200 });

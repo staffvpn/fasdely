@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseStartCommand, buildMiniAppDeepLink } from "./logic.ts";
 import { parseMenuCommand, parseCallbackData, buildProductListKeyboard, parsePriceReplyContext } from "./logic.ts";
+import { isSelfServeRole, isGenuineBotPromptReply } from "./logic.ts";
 
 describe("parseStartCommand", () => {
   it("parses /start with a payload", () => {
@@ -79,5 +80,38 @@ describe("parsePriceReplyContext", () => {
   });
   it("returns null for undefined", () => {
     expect(parsePriceReplyContext(undefined)).toBeNull();
+  });
+});
+
+describe("isSelfServeRole", () => {
+  it("allows staff", () => {
+    expect(isSelfServeRole("staff")).toBe(true);
+  });
+  it("allows business_owner", () => {
+    expect(isSelfServeRole("business_owner")).toBe(true);
+  });
+  it("rejects fasdely_operator", () => {
+    expect(isSelfServeRole("fasdely_operator")).toBe(false);
+  });
+  it("rejects fasdely_admin", () => {
+    expect(isSelfServeRole("fasdely_admin")).toBe(false);
+  });
+  it("rejects undefined", () => {
+    expect(isSelfServeRole(undefined)).toBe(false);
+  });
+});
+
+describe("isGenuineBotPromptReply", () => {
+  it("returns true when the replied-to message is from the bot", () => {
+    expect(isGenuineBotPromptReply({ from: { is_bot: true } })).toBe(true);
+  });
+  it("returns false when the replied-to message is from a human", () => {
+    expect(isGenuineBotPromptReply({ from: { is_bot: false } })).toBe(false);
+  });
+  it("returns false when the replied-to message has no from field", () => {
+    expect(isGenuineBotPromptReply({})).toBe(false);
+  });
+  it("returns false when the replied-to message is undefined", () => {
+    expect(isGenuineBotPromptReply(undefined)).toBe(false);
   });
 });

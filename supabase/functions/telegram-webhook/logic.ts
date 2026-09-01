@@ -58,3 +58,18 @@ export function parsePriceReplyContext(replyToText: string | undefined): string 
   const match = /#pid:(\S+)/.exec(replyToText);
   return match ? match[1] : null;
 }
+
+const SELF_SERVE_ROLES = new Set(["staff", "business_owner"]);
+
+export function isSelfServeRole(role: string | undefined): boolean {
+  if (!role) return false;
+  return SELF_SERVE_ROLES.has(role);
+}
+
+export interface ReplyFromContext {
+  from?: { is_bot?: boolean };
+}
+
+export function isGenuineBotPromptReply(replyToMessage: ReplyFromContext | undefined): boolean {
+  return replyToMessage?.from?.is_bot === true;
+}
