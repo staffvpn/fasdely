@@ -5,6 +5,7 @@ import { CartStore } from "./state.ts";
 import { renderMenuScreen } from "./screens/menu.ts";
 import { renderProductScreen } from "./screens/product.ts";
 import { renderCartScreen } from "./screens/cart.ts";
+import { renderCheckoutScreen } from "./screens/checkout.ts";
 import { h } from "./dom.ts";
 
 const app = document.getElementById("app")!;
@@ -49,15 +50,25 @@ function showCart(menu: GetMenuResponse) {
   showBackButton();
   onBackButtonClick(() => showMenu(menu));
   const rerender = () => showCart(menu);
-  const screen = renderCartScreen(
+  const screen = renderCartScreen(cart, rerender, () => showCheckout(menu), () => showMenu(menu));
+  app.replaceChildren(screen);
+}
+
+function showCheckout(menu: GetMenuResponse) {
+  showBackButton();
+  onBackButtonClick(() => showCart(menu));
+  const screen = renderCheckoutScreen(
     cart,
-    rerender,
-    () => {
-      // Task 14 wires checkout navigation here.
-    },
-    () => showMenu(menu)
+    menu.location.id,
+    (orderId) => showTracking(orderId),
+    (message) => renderError(message),
+    () => showCart(menu)
   );
   app.replaceChildren(screen);
+}
+
+function showTracking(orderId: string) {
+  // Task 15 implements this.
 }
 
 function showProduct(menu: GetMenuResponse, productId: string) {
