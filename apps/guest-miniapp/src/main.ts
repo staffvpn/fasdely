@@ -43,12 +43,20 @@ async function boot() {
 }
 
 function showMenu(data: GetMenuResponse) {
+  if (currentStopPolling) {
+    currentStopPolling();
+    currentStopPolling = null;
+  }
   hideBackButton();
   const screen = renderMenuScreen(data, (productId) => showProduct(data, productId), () => showCart(data), cart);
   app.replaceChildren(screen);
 }
 
 function showCart(menu: GetMenuResponse) {
+  if (currentStopPolling) {
+    currentStopPolling();
+    currentStopPolling = null;
+  }
   showBackButton();
   onBackButtonClick(() => showMenu(menu));
   const rerender = () => showCart(menu);
@@ -71,7 +79,10 @@ function showCheckout(menu: GetMenuResponse) {
 
 function showTracking(orderId: string, menu: GetMenuResponse) {
   hideBackButton();
-  if (currentStopPolling) currentStopPolling();
+  if (currentStopPolling) {
+    currentStopPolling();
+    currentStopPolling = null;
+  }
   const { element, stopPolling } = renderTrackingScreen(orderId, () => showMenu(menu));
   currentStopPolling = stopPolling;
   app.replaceChildren(element);
@@ -80,6 +91,10 @@ function showTracking(orderId: string, menu: GetMenuResponse) {
 function showProduct(menu: GetMenuResponse, productId: string) {
   const product = menu.products.find((p) => p.id === productId);
   if (!product) return;
+  if (currentStopPolling) {
+    currentStopPolling();
+    currentStopPolling = null;
+  }
   showBackButton();
   onBackButtonClick(() => showMenu(menu));
   const screen = renderProductScreen(
