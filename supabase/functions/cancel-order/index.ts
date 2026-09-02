@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyTelegramInitData } from "../_shared/telegramAuth.ts";
 import type { OrderStatus } from "../_shared/orderStateMachine.ts";
-import { json } from "../_shared/http.ts";
+import { json, corsHeaders } from "../_shared/http.ts";
 import { checkCancelAllowed } from "./logic.ts";
 
 interface CancelBody {
@@ -12,6 +12,7 @@ interface CancelBody {
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   let body: CancelBody;

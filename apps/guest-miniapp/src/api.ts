@@ -60,20 +60,28 @@ export interface OrderItemView {
   line_total: number;
 }
 
+async function parseJsonSafe(res: Response): Promise<any> {
+  try {
+    return await res.json();
+  } catch {
+    return { error: "unknown_error" };
+  }
+}
+
 async function post<T>(path: string, body: unknown): Promise<ApiResult<T>> {
   const res = await fetch(`${BASE_URL}/${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const json = await res.json();
+  const json = await parseJsonSafe(res);
   if (!res.ok) return { ok: false, error: json.error ?? "unknown_error", reason: json.reason };
   return { ok: true, data: json };
 }
 
 export async function getMenu(qrToken: string): Promise<ApiResult<GetMenuResponse>> {
   const res = await fetch(`${BASE_URL}/get-menu?qr_token=${encodeURIComponent(qrToken)}`);
-  const json = await res.json();
+  const json = await parseJsonSafe(res);
   if (!res.ok) return { ok: false, error: json.error ?? "unknown_error" };
   return { ok: true, data: json };
 }

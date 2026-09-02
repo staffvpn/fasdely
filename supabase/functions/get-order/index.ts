@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyTelegramInitData } from "../_shared/telegramAuth.ts";
-import { json } from "../_shared/http.ts";
+import { json, corsHeaders } from "../_shared/http.ts";
 import { checkOrderOwnership } from "./logic.ts";
 
 interface GetOrderBody {
@@ -10,6 +10,7 @@ interface GetOrderBody {
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   let body: GetOrderBody;

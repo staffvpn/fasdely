@@ -11,7 +11,7 @@ export function renderCheckoutScreen(
   onBack: () => void
 ): HTMLElement {
   let orderType: "dine_in" | "takeaway" = "dine_in";
-  let requestedTimeMode: "asap" | "scheduled" = "asap";
+  const requestedTimeMode: "asap" = "asap";
   let comment = "";
 
   const dineInOpt = h("div", { class: "co-opt is-on" }, [h("div", { class: "co-opt__label" }, ["Здесь"]), h("div", { class: "co-opt__sub" }, ["Я поем здесь"])]);
@@ -28,17 +28,6 @@ export function renderCheckoutScreen(
   });
 
   const asapChip = h("div", { class: "chip is-active" }, ["Как можно скорее"]);
-  const scheduledChip = h("div", { class: "chip" }, ["Выбрать время"]);
-  asapChip.addEventListener("click", () => {
-    requestedTimeMode = "asap";
-    asapChip.classList.add("is-active");
-    scheduledChip.classList.remove("is-active");
-  });
-  scheduledChip.addEventListener("click", () => {
-    requestedTimeMode = "scheduled";
-    scheduledChip.classList.add("is-active");
-    asapChip.classList.remove("is-active");
-  });
 
   const commentField = h("textarea", { class: "co-field", placeholder: "Что-нибудь важное для нас? Например: без сахара" }, []) as HTMLTextAreaElement;
   commentField.addEventListener("input", () => {
@@ -74,7 +63,7 @@ export function renderCheckoutScreen(
   const body = h("div", { class: "scroller" }, [
     h("div", { class: "co-toggle" }, [dineInOpt, takeawayOpt]),
     h("div", { class: "mod-group__title" }, ["Время"]),
-    h("div", { class: "co-time" }, [asapChip, scheduledChip]),
+    h("div", { class: "co-time" }, [asapChip]),
     h("div", { class: "mod-group__title" }, ["Комментарий"]),
     commentField,
     h("div", { class: "ticket" }, [

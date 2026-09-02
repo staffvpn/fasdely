@@ -9,6 +9,7 @@ import {
   parsePriceReplyContext,
   isSelfServeRole,
   isGenuineBotPromptReply,
+  staffErrorMessage,
   type ProductListEntry,
 } from "./logic.ts";
 
@@ -25,6 +26,41 @@ async function answerCallback(botToken: string, callbackQueryId: string, text?: 
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
+  });
+}
+
+async function editMessageReplyMarkup(botToken: string, chatId: number, messageId: number, replyMarkup: unknown) {
+  await fetch(`https://api.telegram.org/bot${botToken}/editMessageReplyMarkup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, message_id: messageId, reply_markup: replyMarkup }),
+  });
+}
+
+// Shared product-list-entry loader for a business+location: used both to render the
+// initial /меню keyboard and to rebuild the keyboard after a stop/unstop toggle, so
+// both flows always reflect the same current stopped-state.
+async function fetchProductListEntries(db: any, businessId: string, locationId: string): Promise<ProductListEntry[]> {
+  const { data: products } = await db
+    .from("products")
+    .select("id, name, base_price, product_location_overrides!left(location_id, price_override)")
+    .eq("business_id", businessId)
+    .eq("status", "published")
+    .limit(20);
+
+  const { data: stops } = await db
+    .from("stop_list")
+    .select("scope_id")
+    .eq("business_id", businessId)
+    .eq("scope_type", "product")
+    .eq("location_id", locationId)
+    .is("lifted_at", null);
+  const stoppedIds = new Set((stops ?? []).map((s: any) => s.scope_id));
+
+  return (products ?? []).map((p: any) => {
+    const override = (p.product_location_overrides ?? []).find((o: any) => o.location_id === locationId);
+    const price = override?.price_override ?? p.base_price;
+    return { id: p.id, name: p.name, priceLabel: `${price} ₽`, isStopped: stoppedIds.has(p.id) };
   });
 }
 
@@ -95,27 +131,7 @@ Deno.serve(async (req: Request) => {
       return new Response("ok", { status: 200 });
     }
 
-    const { data: products } = await db
-      .from("products")
-      .select("id, name, base_price, product_location_overrides!left(location_id, price_override)")
-      .eq("business_id", profile.business_id)
-      .eq("status", "published")
-      .limit(20);
-
-    const { data: stops } = await db
-      .from("stop_list")
-      .select("scope_id")
-      .eq("business_id", profile.business_id)
-      .eq("scope_type", "product")
-      .eq("location_id", locationId)
-      .is("lifted_at", null);
-    const stoppedIds = new Set((stops ?? []).map((s) => s.scope_id));
-
-    const entries: ProductListEntry[] = (products ?? []).map((p: any) => {
-      const override = (p.product_location_overrides ?? []).find((o: any) => o.location_id === locationId);
-      const price = override?.price_override ?? p.base_price;
-      return { id: p.id, name: p.name, priceLabel: `${price} ₽`, isStopped: stoppedIds.has(p.id) };
-    });
+    const entries = await fetchProductListEntries(db, profile.business_id, locationId);
 
     await sendMessage(botToken, message.chat.id, "Меню вашей точки:", buildProductListKeyboard(entries));
     return new Response("ok", { status: 200 });
@@ -125,7 +141,8 @@ Deno.serve(async (req: Request) => {
   if (message?.reply_to_message && message?.from?.id && message?.chat?.id) {
     const productId = parsePriceReplyContext(message.reply_to_message.text);
     if (productId && isGenuineBotPromptReply(message.reply_to_message)) {
-      const newPrice = Number(message.text?.replace(",", "."));
+      const rawPrice = message.text?.trim();
+      const newPrice = rawPrice ? Number(rawPrice.replace(",", ".")) : NaN;
       if (!Number.isFinite(newPrice) || newPrice < 0) {
         await sendMessage(botToken, message.chat.id, "Не понял цену. Введите число, например 320.");
         return new Response("ok", { status: 200 });
@@ -153,7 +170,7 @@ Deno.serve(async (req: Request) => {
         p_product_id: productId,
         p_new_price: newPrice,
       });
-      await sendMessage(botToken, message.chat.id, error ? `Не удалось изменить цену: ${error.message}` : `Готово, новая цена: ${newPrice} ₽.`);
+      await sendMessage(botToken, message.chat.id, error ? staffErrorMessage(error.message) : `Готово, новая цена: ${newPrice} ₽.`);
       return new Response("ok", { status: 200 });
     }
   }
@@ -182,6 +199,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (parsed.action === "price") {
+        if (!callback.message?.chat.id) return new Response("ok", { status: 200 });
         await sendMessage(botToken, callback.message.chat.id, `Введите новую цену\n\n#pid:${parsed.productId}`, { force_reply: true });
         await answerCallback(botToken, callback.id);
         return new Response("ok", { status: 200 });
@@ -193,7 +211,13 @@ Deno.serve(async (req: Request) => {
         p_product_id: parsed.productId,
         p_stop: parsed.action === "stop",
       });
-      await answerCallback(botToken, callback.id, error ? `Ошибка: ${error.message}` : "Готово");
+
+      if (!error && callback.message?.chat.id && callback.message?.message_id) {
+        const entries = await fetchProductListEntries(db, profile.business_id, locationId);
+        await editMessageReplyMarkup(botToken, callback.message.chat.id, callback.message.message_id, buildProductListKeyboard(entries));
+      }
+
+      await answerCallback(botToken, callback.id, error ? staffErrorMessage(error.message) : "Готово");
       return new Response("ok", { status: 200 });
     }
   }

@@ -73,3 +73,14 @@ export interface ReplyFromContext {
 export function isGenuineBotPromptReply(replyToMessage: ReplyFromContext | undefined): boolean {
   return replyToMessage?.from?.is_bot === true;
 }
+
+const STAFF_ERROR_MESSAGES: Record<string, string> = {
+  not_authorized: "У вас нет доступа к этому действию.",
+  location_not_found: "Точка не найдена.",
+  product_not_found: "Этот товар больше не существует.",
+  invalid_price: "Некорректная цена.",
+};
+
+export function staffErrorMessage(code: string): string {
+  return STAFF_ERROR_MESSAGES[code] ?? "Не удалось выполнить действие. Попробуйте ещё раз.";
+}

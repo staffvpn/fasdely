@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { parseStartCommand, buildMiniAppDeepLink } from "./logic.ts";
 import { parseMenuCommand, parseCallbackData, buildProductListKeyboard, parsePriceReplyContext } from "./logic.ts";
 import { isSelfServeRole, isGenuineBotPromptReply } from "./logic.ts";
+import { staffErrorMessage } from "./logic.ts";
 
 describe("parseStartCommand", () => {
   it("parses /start with a payload", () => {
@@ -113,5 +114,23 @@ describe("isGenuineBotPromptReply", () => {
   });
   it("returns false when the replied-to message is undefined", () => {
     expect(isGenuineBotPromptReply(undefined)).toBe(false);
+  });
+});
+
+describe("staffErrorMessage", () => {
+  it("maps not_authorized", () => {
+    expect(staffErrorMessage("not_authorized")).toBe("У вас нет доступа к этому действию.");
+  });
+  it("maps location_not_found", () => {
+    expect(staffErrorMessage("location_not_found")).toBe("Точка не найдена.");
+  });
+  it("maps product_not_found", () => {
+    expect(staffErrorMessage("product_not_found")).toBe("Этот товар больше не существует.");
+  });
+  it("maps invalid_price", () => {
+    expect(staffErrorMessage("invalid_price")).toBe("Некорректная цена.");
+  });
+  it("falls back to a generic message for unknown codes", () => {
+    expect(staffErrorMessage("some_unexpected_postgres_error")).toBe("Не удалось выполнить действие. Попробуйте ещё раз.");
   });
 });

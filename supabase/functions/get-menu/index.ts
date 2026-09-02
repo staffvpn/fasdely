@@ -1,9 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildMenu, type ProductRow, type StopRow } from "./logic.ts";
-import { json } from "../_shared/http.ts";
+import { json, corsHeaders } from "../_shared/http.ts";
 
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
   const url = new URL(req.url);
   const locationId = url.searchParams.get("location_id");
   const qrToken = url.searchParams.get("qr_token");
